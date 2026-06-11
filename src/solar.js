@@ -709,7 +709,6 @@ export class SolarSystem {
       vertexShader: `
         attribute float aSize;
         attribute float aAlpha;
-        attribute vec3 color;
         varying vec3 vColor;
         varying float vAlpha;
         void main() {
@@ -1181,10 +1180,13 @@ export class SolarSystem {
         // Global base tangent
         let globalTangent = new THREE.Vector3(1, 0, 0);
         if (count >= 2) {
-          globalTangent.subVectors(
+          const deltaVec = new THREE.Vector3().subVectors(
             this.asteroidTrailPositions[0],
             this.asteroidTrailPositions[Math.min(3, count - 1)]
-          ).normalize();
+          );
+          if (deltaVec.lengthSq() > 0.0001) {
+            globalTangent.copy(deltaVec).normalize();
+          }
         }
 
         for (let k = 0; k < this.asteroidTrailLen; k++) {
@@ -1214,10 +1216,15 @@ export class SolarSystem {
           // Calculate local tangent and perpendicular vectors for this specific history segment
           let localTangent = new THREE.Vector3();
           if (count >= 3) {
-            const prevIdx = Math.max(0, k - 1);
+            const prevIdx = Math.min(count - 1, Math.max(0, k - 1));
             const nextIdx = Math.min(count - 1, k + 1);
-            if (prevIdx !== nextIdx) {
-              localTangent.subVectors(this.asteroidTrailPositions[prevIdx], this.asteroidTrailPositions[nextIdx]).normalize();
+            if (prevIdx !== nextIdx && this.asteroidTrailPositions[prevIdx] && this.asteroidTrailPositions[nextIdx]) {
+              const deltaVec = new THREE.Vector3().subVectors(this.asteroidTrailPositions[prevIdx], this.asteroidTrailPositions[nextIdx]);
+              if (deltaVec.lengthSq() > 0.0001) {
+                localTangent.copy(deltaVec).normalize();
+              } else {
+                localTangent.copy(globalTangent);
+              }
             } else {
               localTangent.copy(globalTangent);
             }
@@ -1226,7 +1233,13 @@ export class SolarSystem {
           }
 
           const localUp = new THREE.Vector3(0, 1, 0.15).normalize();
-          const localSide = new THREE.Vector3().crossVectors(localTangent, localUp).normalize();
+          let localSide = new THREE.Vector3().crossVectors(localTangent, localUp);
+          if (localSide.lengthSq() < 0.0001) {
+            // If localTangent is parallel to localUp, use an alternative up vector to prevent NaN
+            const altUp = new THREE.Vector3(1, 0, 0);
+            localSide.crossVectors(localTangent, altUp);
+          }
+          localSide.normalize();
           const localUpPerp = new THREE.Vector3().crossVectors(localSide, localTangent).normalize();
 
           const basePos = (k < count)

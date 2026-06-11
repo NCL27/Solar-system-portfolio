@@ -224,6 +224,13 @@ function closePanel() {
   document.body.style.overflow = '';
   destroyPacmanGame();
   destroyInvadersGame();
+  
+  // Clear the inner HTML after transition ends to avoid background rendering/iframe bugs in Safari
+  setTimeout(() => {
+    if (!panel.classList.contains('active')) {
+      panelContent.innerHTML = '';
+    }
+  }, 400);
 }
 
 panelClose.addEventListener('click', closePanel);
