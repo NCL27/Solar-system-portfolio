@@ -36,33 +36,34 @@ function generateSparklinePath() {
 }
 
 export const PANEL_RENDERERS = {
-  cv: (t) => `
-    <div class="cv-compact-header">
-      <div class="cv-compact-title">
-        <span class="cv-asteroid-emoji">☄️</span>
-        <div>
-          <div class="cv-title-text">${t.ui.panels.cv.title}</div>
-          <div class="cv-title-sub">${t.ui.panels.cv.subtitle}</div>
+  cv: (t) => {
+    const isEs = t.ui.panels.cv.subtitle === 'ARMAGEDON';
+    const loadingText = isEs ? '📡 INICIALIZANDO INTERFAZ DE CV...' : '📡 INITIALIZING CV INTERFACE...';
+    return `
+      <div class="cv-compact-header">
+        <div class="cv-compact-title">
+          <span class="cv-asteroid-emoji">☄️</span>
+          <div>
+            <div class="cv-title-text">${t.ui.panels.cv.title}</div>
+            <div class="cv-title-sub">${t.ui.panels.cv.subtitle}</div>
+          </div>
+          <span class="cv-blink-dot blink-fast">● LIVE</span>
         </div>
-        <span class="cv-blink-dot blink-fast">● LIVE</span>
+        <a class="console-link-btn cv-download-btn"
+           href="${t.ui.panels.cv.pdfPath}"
+           download="${t.ui.panels.cv.pdfDownloadName}">
+          <span>${t.ui.panels.cv.export}</span>
+        </a>
       </div>
-      <a class="console-link-btn cv-download-btn"
-         href="${t.ui.panels.cv.pdfPath}"
-         download="${t.ui.panels.cv.pdfDownloadName}">
-        <span>${t.ui.panels.cv.export}</span>
-      </a>
-    </div>
 
-    <div class="cv-iframe-full-container">
-      <iframe
-        src="${t.ui.panels.cv.pdfPath}#toolbar=0&view=FitH"
-        class="cv-iframe"
-        title="Curriculum Vitae — Nicol Cuello Alvarez"
-        loading="lazy"
-      ></iframe>
-      <div class="cv-scanline-overlay"></div>
-    </div>
-  `,
+      <div class="cv-iframe-full-container" id="cv-viewer-root" style="display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0;">
+        <div class="cv-loading-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--accent-gold); font-family: var(--font-mono); gap: 10px; padding: 2rem;">
+          <span class="blink-fast" id="cv-loading-text" style="font-size: 0.75rem;">${loadingText}</span>
+        </div>
+        <div class="cv-scanline-overlay"></div>
+      </div>
+    `;
+  },
 
   about: (t) => `
     <div class="panel-header" style="justify-content: center; border-bottom: none; margin-bottom: 1rem; padding-bottom: 0;">

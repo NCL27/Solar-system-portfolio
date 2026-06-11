@@ -31,7 +31,11 @@
 
 /* ---- Reset ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
+  background-color: #020610; /* Prevent white background leak on iOS Safari when body is fixed */
+}
 
 body {
   font-family: var(--font-main);
@@ -41,6 +45,10 @@ body {
   height: 100dvh;
   width: 100vw;
   user-select: none;
+  overscroll-behavior: none; /* Block browser level swipe-to-navigate and refresh */
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* ---- Loader ---- */
@@ -278,6 +286,7 @@ body {
   position: fixed;
   inset: 0;
   cursor: grab;
+  touch-action: none; /* Block native gestures like pinch zoom or scroll on the 3D canvas viewport */
 }
 #canvas-container:active { cursor: grabbing; }
 #canvas-container canvas { display: block; }
@@ -352,13 +361,18 @@ body {
   z-index: 400;
   width: var(--panel-width);
   transform: translateX(calc(100% + 48px));
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  visibility: hidden;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s step-end;
   overflow: hidden;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 35px rgba(108, 99, 255, 0.15);
   border-radius: 16px;
   border: 1px solid rgba(108, 99, 255, 0.3);
 }
-.panel.active { transform: translateX(0); }
+.panel.active {
+  transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+}
 
 /* CV panel — wider, gold-themed variant */
 .panel.cv-panel {
@@ -517,6 +531,7 @@ body {
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   scrollbar-width: thin;
   scrollbar-color: var(--accent-secondary) transparent;
   padding: 2.2rem 2rem;
@@ -926,15 +941,9 @@ body {
    ============================================= */
 
 @media (max-width: 768px) {
-  /* Show mobile hint, hide bottom-left controls */
+  /* Hide mobile hint as requested, hide bottom-left controls */
   .mobile-hint {
-    display: block;
-    bottom: 0.6rem;
-    font-size: 0.62rem;
-    padding: 0.3rem 0.8rem;
-    white-space: normal;
-    text-align: center;
-    max-width: 90vw;
+    display: none !important;
   }
   .hud-bl { display: none; }
 
@@ -1308,6 +1317,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  flex-wrap: wrap; /* Allow wrapping on small devices */
 }
 .test-status {
   font-size: 0.55rem;
@@ -1340,6 +1350,8 @@ body {
   color: var(--text-primary);
   flex-grow: 1;
   font-weight: 600;
+  word-break: break-all;
+  overflow-wrap: break-word; /* Force wrapping of long spec file names on mobile */
 }
 .test-duration {
   font-size: 0.6rem;
@@ -2184,6 +2196,136 @@ body {
     height: 90dvh;
     bottom: 8px;
   }
+}
+
+/* =============================================
+   CV ZOOM CONTROLS
+   ============================================= */
+.cv-zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 0.5rem 1rem;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(245, 166, 35, 0.2);
+  color: var(--accent-gold);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  z-index: 10;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.cv-zoom-controls .zoom-label {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.cv-zoom-controls .zoom-btn {
+  background: rgba(245, 166, 35, 0.05);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  color: var(--accent-gold);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.cv-zoom-controls .zoom-btn:hover {
+  background: rgba(245, 166, 35, 0.2);
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.35);
+  transform: translateY(-1px);
+}
+
+.cv-zoom-controls .zoom-btn:active {
+  transform: translateY(1px);
+}
+
+.cv-zoom-controls .zoom-range {
+  flex: 1;
+  max-width: 140px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(245, 166, 35, 0.15);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--accent-gold);
+  -webkit-appearance: none;
+  transition: opacity 0.2s;
+}
+
+/* Custom range inputs for consistency on webkit */
+.cv-zoom-controls .zoom-range::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+  background: rgba(245, 166, 35, 0.15);
+  border-radius: 2px;
+  border: 1px solid rgba(245, 166, 35, 0.1);
+}
+
+.cv-zoom-controls .zoom-range::-webkit-slider-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  border: 1px solid #fff;
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -5px; /* center it */
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.cv-zoom-controls .zoom-range::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  background: #fff;
+  box-shadow: 0 0 12px var(--accent-gold);
+}
+
+.cv-zoom-controls .zoom-percent {
+  font-weight: 700;
+  min-width: 38px;
+  text-align: right;
+  letter-spacing: 0.04em;
+}
+
+/* Scrollable container for PDF canvases */
+.cv-pages-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 166, 35, 0.3) rgba(0, 0, 0, 0.2);
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cv-pages-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cv-pages-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cv-pages-container::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.3);
+  border-radius: 3px;
+}
+
+.cv-pages-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 166, 35, 0.6);
 }
 
 

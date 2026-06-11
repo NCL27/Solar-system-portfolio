@@ -94,6 +94,8 @@ export class SolarSystem {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 64, 64);
     const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
     return tex;
   }
 
@@ -664,81 +666,6 @@ export class SolarSystem {
     this.asteroidMesh.position.set(x0, 0, z0);
     this.asteroidGroup.add(this.asteroidMesh);
 
-    // ---- COMET TAIL — volumetric particle system ----
-    this.asteroidTrailLen = 130;      // trail segments (positions in history) - increased for longer trail
-    this.asteroidTrailPositions = [];
-    const PPS = 18;                   // particles per segment - increased for density/volume
-    this.asteroidTailPPS = PPS;
-    const totalParts = this.asteroidTrailLen * PPS;
-
-    // Pre-bake random spread offsets so particles don't jitter each frame
-    this.asteroidTailOffsets = [];
-    for (let k = 0; k < this.asteroidTrailLen; k++) {
-      const ring = [];
-      for (let j = 0; j < PPS; j++) {
-        // High density distribution: blend of inner core particles and outer sheath particles
-        const angle = (j / PPS) * Math.PI * 2 + Math.random() * 0.5;
-        // Biased distribution: concentrate more particles near the center, but allow wide dispersal
-        const rFactor = Math.pow(Math.random(), 1.5);
-        ring.push({
-          angle,
-          r: 0.1 + rFactor * 0.9,
-          oy: (Math.random() - 0.5) * 0.8, // vertical spread offset
-          speedOffset: 0.8 + Math.random() * 0.4, // speed variations for spark dispersion
-        });
-      }
-      this.asteroidTailOffsets.push(ring);
-    }
-
-    const tGeo = new THREE.BufferGeometry();
-    const tPositions = new Float32Array(totalParts * 3);
-    const tColors = new Float32Array(totalParts * 3);
-    const tSizes = new Float32Array(totalParts);
-    const tAlphas = new Float32Array(totalParts);
-    tGeo.setAttribute('position', new THREE.BufferAttribute(tPositions, 3));
-    tGeo.setAttribute('color', new THREE.BufferAttribute(tColors, 3));
-    tGeo.setAttribute('aSize', new THREE.BufferAttribute(tSizes, 1));
-    tGeo.setAttribute('aAlpha', new THREE.BufferAttribute(tAlphas, 1));
-
-    const tMat = new THREE.ShaderMaterial({
-      uniforms: {
-        pointTexture: { value: this.starSprite },
-      },
-      vertexShader: `
-        attribute float aSize;
-        attribute float aAlpha;
-        attribute vec3 color;
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main() {
-          vColor = color;
-          vAlpha = aAlpha;
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          // Attenuate point size by distance, with minimum clamping to keep distant particles visible
-          gl_PointSize = max(1.5, aSize * (350.0 / -mv.z));
-          gl_Position = projectionMatrix * mv;
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D pointTexture;
-        varying vec3 vColor;
-        varying float vAlpha;
-        void main() {
-          float d = length(gl_PointCoord - vec2(0.5));
-          // Sharper core with soft outer glow for a realistic fiery plume
-          float glow = exp(-d * 5.0) * 0.7 + exp(-d * 2.0) * 0.3;
-          gl_FragColor = vec4(vColor, glow * vAlpha);
-        }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      vertexColors: true,
-    });
-
-    this.asteroidTrail = new THREE.Points(tGeo, tMat);
-    this.scene.add(this.asteroidTrail); // world space — NOT child of asteroidGroup
-
     // Push into planetMeshes so raycaster picks it up
     this.planetMeshes.push(this.asteroidMesh);
   }
@@ -1159,118 +1086,6 @@ export class SolarSystem {
       // Pulse emissive — hot white-orange core
       this.asteroidMesh.material.emissiveIntensity = 0.18 + Math.sin(elapsed * 2.2) * 0.06;
 
-      // ---- Update volumetric comet tail ----
-      if (this.asteroidTrail) {
-        const worldPos = new THREE.Vector3();
-        this.asteroidMesh.getWorldPosition(worldPos);
-
-        this.asteroidTrailPositions.unshift(worldPos.clone());
-        if (this.asteroidTrailPositions.length > this.asteroidTrailLen) {
-          this.asteroidTrailPositions.pop();
-        }
-
-        const count = this.asteroidTrailPositions.length;
-        const PPS = this.asteroidTailPPS;
-        const posAttr = this.asteroidTrail.geometry.getAttribute('position');
-        const colAttr = this.asteroidTrail.geometry.getAttribute('color');
-        const sizeAttr = this.asteroidTrail.geometry.getAttribute('aSize');
-        const alphaAttr = this.asteroidTrail.geometry.getAttribute('aAlpha');
-
-        // Global base tangent
-        let globalTangent = new THREE.Vector3(1, 0, 0);
-        if (count >= 2) {
-          globalTangent.subVectors(
-            this.asteroidTrailPositions[0],
-            this.asteroidTrailPositions[Math.min(3, count - 1)]
-          ).normalize();
-        }
-
-        for (let k = 0; k < this.asteroidTrailLen; k++) {
-          const t = k / (this.asteroidTrailLen - 1);          // 0=head, 1=tail
-
-          // Exponential decay curves for alpha and cone spreading
-          const alpha = Math.pow(1.0 - t, 1.6);
-          // Wide expanding cone: starts tight around the asteroid, then flares outwards dramatically
-          const spreadR = 0.45 + Math.pow(t, 0.9) * 2.8;
-
-          // Color gradient: white-yellow (head) -> fiery gold -> intense orange -> plasma red -> dark crimson smoke
-          let r, g, b;
-          if (t < 0.08) {
-            const f = t / 0.08;
-            r = 1.0; g = 1.0; b = 0.8 + (1.0 - f) * 0.2; // white-hot
-          } else if (t < 0.28) {
-            const f = (t - 0.08) / 0.20;
-            r = 1.0; g = 1.0 - f * 0.45; b = 0.8 - f * 0.8; // yellow-gold to rich orange
-          } else if (t < 0.65) {
-            const f = (t - 0.28) / 0.37;
-            r = 1.0; g = 0.55 - f * 0.45; b = 0.0; // orange to rich crimson-red
-          } else {
-            const f = (t - 0.65) / 0.35;
-            r = 1.0 - f * 0.85; g = 0.10 - f * 0.10; b = 0.0; // fading dark smoke
-          }
-
-          // Calculate local tangent and perpendicular vectors for this specific history segment
-          let localTangent = new THREE.Vector3();
-          if (count >= 3) {
-            const prevIdx = Math.max(0, k - 1);
-            const nextIdx = Math.min(count - 1, k + 1);
-            if (prevIdx !== nextIdx) {
-              localTangent.subVectors(this.asteroidTrailPositions[prevIdx], this.asteroidTrailPositions[nextIdx]).normalize();
-            } else {
-              localTangent.copy(globalTangent);
-            }
-          } else {
-            localTangent.copy(globalTangent);
-          }
-
-          const localUp = new THREE.Vector3(0, 1, 0.15).normalize();
-          const localSide = new THREE.Vector3().crossVectors(localTangent, localUp).normalize();
-          const localUpPerp = new THREE.Vector3().crossVectors(localSide, localTangent).normalize();
-
-          const basePos = (k < count)
-            ? this.asteroidTrailPositions[k]
-            : (this.asteroidTrailPositions[count - 1] || worldPos);
-
-          const offsets = this.asteroidTailOffsets[k];
-          for (let j = 0; j < PPS; j++) {
-            const idx = k * PPS + j;
-            const off = offsets[j];
-
-            // Animate swirl / turbulence to simulate living, roaring plasma
-            // This propagates a wave down the tail so the tail appears to ripple and pulse dynamically
-            const wave = Math.sin(elapsed * 15.0 - k * 0.18) * 0.15;
-            const swirlAngle = off.angle + elapsed * 4.0 * off.speedOffset + k * 0.05;
-            const currentR = spreadR * off.r * (1.0 + wave);
-
-            const ox = Math.cos(swirlAngle) * currentR;
-            // Add vertical turbulence
-            const oy = off.oy * spreadR * 0.65 + Math.sin(elapsed * 10.0 + k * 0.3) * 0.1;
-            const oz = Math.sin(swirlAngle) * currentR;
-
-            // Parabolic bow shock shield wrapping forward around the front of the asteroid
-            // Max forward shift is at t=0 (the head) and drops off quickly, curving around the sphere
-            const forwardShift = 0.62 * (1.0 - t) * (1.0 - off.r * off.r * 0.75);
-
-            const px = basePos.x + localSide.x * ox + localUpPerp.x * oy + localTangent.x * forwardShift;
-            const py = basePos.y + localSide.y * ox + localUpPerp.y * oy + localTangent.y * forwardShift + oz * 0.15;
-            const pz = basePos.z + localSide.z * ox + localUpPerp.z * oy + localTangent.z * forwardShift;
-
-            posAttr.setXYZ(idx, px, py, pz);
-            colAttr.setXYZ(idx, r, g, b);
-
-            // Dynamic size profile: large concentrated particles near head, fading but with random dispersion size
-            const size = (4.5 + Math.pow(1.0 - t, 2.2) * 11.0) * (0.4 + off.r * 0.6);
-            sizeAttr.setX(idx, size);
-            alphaAttr.setX(idx, alpha * (0.6 + off.r * 0.4));
-          }
-        }
-
-        posAttr.needsUpdate = true;
-        colAttr.needsUpdate = true;
-        sizeAttr.needsUpdate = true;
-        alphaAttr.needsUpdate = true;
-        this.asteroidTrail.geometry.setDrawRange(0, this.asteroidTrailLen * PPS);
-      }
     }
 
     // Animate education moon (slower)
