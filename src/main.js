@@ -927,3 +927,100 @@ if (document.fonts) {
     window.openSpaceInvaders = openSpaceInvaders;
   });
 }
+
+// Check if an element or any of its parents is actively scrollable
+function isScrollable(el) {
+  while (el && el !== document.body && el !== document.documentElement) {
+    const overflowY = window.getComputedStyle(el).overflowY;
+    const overflowX = window.getComputedStyle(el).overflowX;
+    const isScrollableY = (overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight;
+    const isScrollableX = (overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth;
+    if (isScrollableY || isScrollableX) {
+      return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+let touchStartY = 0;
+let touchStartX = 0;
+
+document.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  // Always prevent multi-finger pinch-to-zoom gestures at the browser level
+  if (e.touches.length > 1) {
+    e.preventDefault();
+    return;
+  }
+
+  // Find if touch originates inside an actively scrollable container
+  const scrollableParent = isScrollable(e.target);
+  if (!scrollableParent) {
+    e.preventDefault();
+    return;
+  }
+
+  // Prevent scroll chaining and rubber-banding at boundaries on iOS Safari
+  const clientY = e.touches[0].clientY;
+  const clientX = e.touches[0].clientX;
+  const dy = clientY - touchStartY; // > 0 means dragging down (scrolling up)
+  const dx = clientX - touchStartX; // > 0 means dragging right (scrolling left)
+
+  const scrollTop = scrollableParent.scrollTop;
+  const scrollHeight = scrollableParent.scrollHeight;
+  const clientHeight = scrollableParent.clientHeight;
+
+  const scrollLeft = scrollableParent.scrollLeft;
+  const scrollWidth = scrollableParent.scrollWidth;
+  const clientWidth = scrollableParent.clientWidth;
+
+  // Determine scrolling preference direction
+  const isVertical = Math.abs(dy) > Math.abs(dx);
+
+  if (isVertical) {
+    const canScrollY = scrollHeight > clientHeight;
+    if (!canScrollY) {
+      e.preventDefault();
+      return;
+    }
+    const isScrollingUp = dy > 0;
+    const isScrollingDown = dy < 0;
+    if (isScrollingUp && scrollTop <= 1) {
+      e.preventDefault();
+      return;
+    }
+    if (isScrollingDown && scrollTop + clientHeight >= scrollHeight - 1) {
+      e.preventDefault();
+      return;
+    }
+  } else {
+    const canScrollX = scrollWidth > clientWidth;
+    if (!canScrollX) {
+      e.preventDefault();
+      return;
+    }
+    const isScrollingLeft = dx > 0;
+    const isScrollingRight = dx < 0;
+    if (isScrollingLeft && scrollLeft <= 1) {
+      e.preventDefault();
+      return;
+    }
+    if (isScrollingRight && scrollLeft + clientWidth >= scrollWidth - 1) {
+      e.preventDefault();
+      return;
+    }
+  }
+}, { passive: false });
+
+document.addEventListener('gesturestart', (e) => {
+  e.preventDefault();
+}, { passive: false });
+
+

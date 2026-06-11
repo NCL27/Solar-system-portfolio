@@ -31,7 +31,11 @@
 
 /* ---- Reset ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior: none;
+  background-color: #020610; /* Prevent white background leak on iOS Safari when body is fixed */
+}
 
 body {
   font-family: var(--font-main);
@@ -41,6 +45,10 @@ body {
   height: 100dvh;
   width: 100vw;
   user-select: none;
+  overscroll-behavior: none; /* Block browser level swipe-to-navigate and refresh */
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* ---- Loader ---- */
@@ -278,6 +286,7 @@ body {
   position: fixed;
   inset: 0;
   cursor: grab;
+  touch-action: none; /* Block native gestures like pinch zoom or scroll on the 3D canvas viewport */
 }
 #canvas-container:active { cursor: grabbing; }
 #canvas-container canvas { display: block; }
