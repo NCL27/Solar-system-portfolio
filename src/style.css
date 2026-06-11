@@ -522,6 +522,7 @@ body {
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   scrollbar-width: thin;
   scrollbar-color: var(--accent-secondary) transparent;
   padding: 2.2rem 2rem;
@@ -1307,6 +1308,7 @@ body {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  flex-wrap: wrap; /* Allow wrapping on small devices */
 }
 .test-status {
   font-size: 0.55rem;
@@ -1339,6 +1341,8 @@ body {
   color: var(--text-primary);
   flex-grow: 1;
   font-weight: 600;
+  word-break: break-all;
+  overflow-wrap: break-word; /* Force wrapping of long spec file names on mobile */
 }
 .test-duration {
   font-size: 0.6rem;

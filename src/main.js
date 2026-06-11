@@ -407,6 +407,7 @@ document.addEventListener('keydown', e => {
 
 // ---- Tooltip ----
 function showTooltip(def, x, y) {
+  if (!tooltip) return;
   tooltip.textContent = `${def.emoji} ${def.name} — ${def.hint}`;
   tooltip.classList.add('visible');
 
@@ -423,6 +424,7 @@ function showTooltip(def, x, y) {
 }
 
 function hideTooltip() {
+  if (!tooltip) return;
   tooltip.classList.remove('visible');
 }
 
