@@ -9,13 +9,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^8.0.12"
+    "vite": "^5.4.21"
   },
   "dependencies": {
     "gsap": "^3.15.0",
     "three": "^0.184.0"
-  },
-  "engines": {
-    "node": "20"
   }
 }
