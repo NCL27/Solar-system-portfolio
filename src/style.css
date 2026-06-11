@@ -1902,22 +1902,12 @@ body {
 }
 
 /* Responsiveness adjustments */
-@media (max-width: 900px) {
-  .hud-center-top {
-    top: 3.8rem;
-  }
-}
-
 @media (max-width: 768px) {
-  /* Nav console: full-width strip just below the very top */
+  /* Nav console hidden on mobile */
   .hud-center-top {
-    top: 0;
-    left: 0;
-    right: 0;
-    transform: none;
-    width: 100%;
-    padding: 0;
+    display: none;
   }
+
 
   .hud-nav-console {
     overflow-x: auto;
