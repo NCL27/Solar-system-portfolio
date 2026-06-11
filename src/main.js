@@ -107,6 +107,169 @@ function updateTelemetryCard(planetId) {
   }
 }
 
+// ---- PDF.js Mobile & Desktop Viewer ----
+let pdfDocLoadingTask = null;
+
+function loadPdfJS() {
+  return new Promise((resolve, reject) => {
+    if (window.pdfjsLib) {
+      resolve(window.pdfjsLib);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    script.onerror = (e) => reject(new Error('Failed to load PDF.js: ' + e.message));
+    document.head.appendChild(script);
+  });
+}
+
+function renderPDFViewer(pdfUrl) {
+  if (pdfDocLoadingTask && pdfDocLoadingTask.destroy) {
+    pdfDocLoadingTask.destroy();
+  }
+
+  let currentZoom = 100;
+  const renderedCanvases = [];
+
+  loadPdfJS().then((pdfjs) => {
+    pdfDocLoadingTask = pdfjs.getDocument(pdfUrl);
+    return pdfDocLoadingTask.promise;
+  }).then((pdf) => {
+    const container = document.getElementById('cv-viewer-root');
+    if (!container) return;
+    
+    // Clear container but retain the scanline overlay
+    container.innerHTML = '<div class="cv-scanline-overlay"></div>';
+
+    // 1. Create zoom controls bar
+    const zoomControls = document.createElement('div');
+    zoomControls.className = 'cv-zoom-controls';
+    zoomControls.innerHTML = `
+      <span class="zoom-label">${currentLang === 'es' ? 'ZOOM:' : 'ZOOM:'}</span>
+      <button class="zoom-btn zoom-minus" title="${currentLang === 'es' ? 'Alejar' : 'Zoom Out'}">−</button>
+      <input type="range" class="zoom-range" min="100" max="250" step="5" value="100">
+      <button class="zoom-btn zoom-plus" title="${currentLang === 'es' ? 'Acercar' : 'Zoom In'}">+</button>
+      <span class="zoom-percent">100%</span>
+    `;
+    container.appendChild(zoomControls);
+
+    // 2. Create pages container
+    const pagesContainer = document.createElement('div');
+    pagesContainer.className = 'cv-pages-container';
+    pagesContainer.style.width = '100%';
+    pagesContainer.style.flex = '1';
+    pagesContainer.style.minHeight = '0';
+    pagesContainer.style.overflow = 'auto';
+    pagesContainer.style.display = 'flex';
+    pagesContainer.style.flexDirection = 'column';
+    pagesContainer.style.alignItems = 'stretch';
+    pagesContainer.style.gap = '16px';
+    pagesContainer.style.padding = '16px 8px';
+    pagesContainer.style.boxSizing = 'border-box';
+    container.appendChild(pagesContainer);
+
+    const slider = zoomControls.querySelector('.zoom-range');
+    const percentLabel = zoomControls.querySelector('.zoom-percent');
+    const btnMinus = zoomControls.querySelector('.zoom-minus');
+    const btnPlus = zoomControls.querySelector('.zoom-plus');
+
+    function updateZoom(newZoom) {
+      currentZoom = Math.max(100, Math.min(250, newZoom));
+      slider.value = currentZoom;
+      percentLabel.textContent = `${currentZoom}%`;
+      
+      renderedCanvases.forEach(({ canvas, originalMaxWidth }) => {
+        if (currentZoom === 100) {
+          canvas.style.width = '100%';
+          canvas.style.maxWidth = originalMaxWidth;
+        } else {
+          canvas.style.width = `${currentZoom}%`;
+          canvas.style.maxWidth = 'none';
+        }
+      });
+    }
+
+    slider.addEventListener('input', (e) => {
+      updateZoom(parseInt(e.target.value, 10));
+    });
+
+    btnMinus.addEventListener('click', () => {
+      updateZoom(currentZoom - 25);
+    });
+
+    btnPlus.addEventListener('click', () => {
+      updateZoom(currentZoom + 25);
+    });
+
+    const numPages = pdf.numPages;
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      pdf.getPage(pageNum).then((page) => {
+        // Base standard scale viewport
+        const standardViewport = page.getViewport({ scale: 1.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        const containerWidth = pagesContainer.clientWidth || 320;
+        const fitScale = (containerWidth - 24) / standardViewport.width;
+        
+        // Dynamically compute high-DPI rendering multiplier based on devicePixelRatio
+        const dpr = window.devicePixelRatio || 1;
+        const scaleMultiplier = Math.min(4.0, Math.max(2.5, dpr * 1.5));
+        const responsiveViewport = page.getViewport({ scale: fitScale * scaleMultiplier });
+
+        canvas.width = responsiveViewport.width;
+        canvas.height = responsiveViewport.height;
+
+        // originalMaxWidth based on standard A4 scale 1.5, which is ~892px
+        const originalMaxWidth = `${standardViewport.width * 1.5}px`;
+
+        if (currentZoom === 100) {
+          canvas.style.width = '100%';
+          canvas.style.maxWidth = originalMaxWidth;
+        } else {
+          canvas.style.width = `${currentZoom}%`;
+          canvas.style.maxWidth = 'none';
+        }
+
+        canvas.style.margin = '0 auto';
+        canvas.style.height = 'auto';
+        canvas.style.border = '1px solid rgba(245, 166, 35, 0.25)';
+        canvas.style.borderRadius = '4px';
+        canvas.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+        canvas.style.display = 'block';
+
+        pagesContainer.appendChild(canvas);
+        renderedCanvases.push({ canvas, originalMaxWidth });
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: responsiveViewport,
+        };
+        page.render(renderContext);
+      });
+    }
+  }).catch((err) => {
+    console.error('PDF.js rendering error:', err);
+    const container = document.getElementById('cv-viewer-root');
+    if (container) {
+      container.innerHTML = `
+        <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; text-align:center; padding:2rem; font-family:var(--font-mono);">
+          <p style="color:var(--text-secondary); margin-bottom:1rem; font-size:0.75rem;">
+            ${currentLang === 'es' ? 'No se pudo cargar el CV en el visor interactivo.' : 'Could not load CV in the interactive viewer.'}
+          </p>
+          <a href="${pdfUrl}" target="_blank" class="hud-btn" style="border-color:var(--accent-gold) !important; color:var(--accent-gold) !important; background:rgba(245,166,35,0.05) !important; text-decoration:none; padding:10px 20px; display:inline-flex; align-items:center;">
+            <span>${currentLang === 'es' ? 'ABRIR DIRECTAMENTE' : 'OPEN DIRECTLY'}</span>
+          </a>
+        </div>
+      `;
+    }
+  });
+}
+
 // ---- Open / Close Panel ----
 function openPanel(sectionId) {
   const renderer = PANEL_RENDERERS[sectionId];
@@ -121,6 +284,7 @@ function openPanel(sectionId) {
   // CV panel: add wider gold class; CSS handles all layout via flexbox
   if (sectionId === 'cv') {
     panel.classList.add('cv-panel');
+    renderPDFViewer(t.ui.panels.cv.pdfPath);
   } else {
     panel.classList.remove('cv-panel');
   }
@@ -569,6 +733,9 @@ function updateUILanguage() {
         if (activeSection === 'skills') {
           animateSkillBars(panelContent);
         }
+        if (activeSection === 'cv') {
+          renderPDFViewer(t.ui.panels.cv.pdfPath);
+        }
       }
     } else if (isPacman) {
       // Re-translate Pacman static strings
@@ -725,9 +892,11 @@ function init() {
   }
 
   // Reset camera button
-  resetBtn.addEventListener('click', () => {
-    solar?.resetCamera();
-  });
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      solar?.resetCamera();
+    });
+  }
 
   // Initialize first view telemetry card
   updateTelemetryCard('about');
