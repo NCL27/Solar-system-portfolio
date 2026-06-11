@@ -60,6 +60,8 @@ function canvasToTexture(canvas) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
   return tex;
 }
 
@@ -531,5 +533,7 @@ export function createRingTexture() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
   return tex;
 }

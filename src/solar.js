@@ -94,6 +94,8 @@ export class SolarSystem {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 64, 64);
     const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
     return tex;
   }
 
