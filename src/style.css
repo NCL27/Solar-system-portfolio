@@ -921,32 +921,90 @@ body {
   white-space: nowrap;
   backdrop-filter: blur(10px);
 }
+/* =============================================
+   MOBILE RESPONSIVE — COMPREHENSIVE FIXES
+   ============================================= */
+
 @media (max-width: 768px) {
-  .mobile-hint { display: block; }
+  /* Show mobile hint, hide bottom-left controls */
+  .mobile-hint {
+    display: block;
+    bottom: 0.6rem;
+    font-size: 0.62rem;
+    padding: 0.3rem 0.8rem;
+    white-space: normal;
+    text-align: center;
+    max-width: 90vw;
+  }
   .hud-bl { display: none; }
-  .hud-tl, .hud-tr { font-size: 0.55rem; }
+
+  /* Hide verbose top-left corner on mobile — too cramped */
+  .hud-tl { display: none; }
+
+  /* Top-right: keep only lang button and status dot, hide label text */
+  .hud-tr {
+    top: 0.6rem;
+    right: 0.6rem;
+    gap: 0.4rem;
+  }
+  .hud-tr .hud-label { display: none; }
+  .hud-tr .hud-bracket { display: none; }
+
+  /* Bottom-right: tighten position */
+  .hud-br {
+    bottom: 0.5rem;
+    right: 0.5rem;
+    gap: 0.3rem;
+  }
+  .hud-br .hud-bracket { display: none; }
+
+  /* Reduce reset button size */
+  .hud-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.55rem;
+  }
 }
 
 /* Responsive panel */
 @media (max-width: 480px) {
-  :root { --panel-width: calc(100vw - 32px); }
+  :root { --panel-width: calc(100vw - 24px); }
   .panel {
     top: auto;
-    height: 80dvh;
-    bottom: 16px;
-    right: 16px;
-    left: 16px;
+    height: 85dvh;
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
     width: var(--panel-width);
-    transform: translateY(calc(100% + 32px));
-    border-radius: 16px;
+    transform: translateY(calc(100% + 24px));
+    border-radius: 16px 16px 12px 12px;
     border: 1px solid rgba(108, 99, 255, 0.35);
   }
   .panel.active { transform: translateY(0); }
   .panel-inner {
-    border-radius: 16px;
+    border-radius: 16px 16px 12px 12px;
+    padding: 1.4rem 1.1rem;
   }
   .contact-grid { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: 1fr 1fr; }
+
+  /* About text slightly smaller */
+  .about-intro { font-size: 1.65rem; }
+  .about-role  { font-size: 0.8rem; }
+  .about-bio   { font-size: 0.82rem; }
+
+  /* Panel header compact */
+  .panel-header {
+    gap: 0.8rem;
+    margin-bottom: 1.4rem;
+    padding-bottom: 1rem;
+  }
+  .panel-planet-icon-wrapper { width: 54px; height: 54px; }
+  .panel-planet-icon { font-size: 1.6rem; }
+  .panel-title { font-size: 1.25rem; }
+
+  /* Cards compact */
+  .card { padding: 1rem; }
+  .card-title { font-size: 0.95rem; }
 }
 
 /* Glow pulse animation */
@@ -1846,56 +1904,102 @@ body {
 /* Responsiveness adjustments */
 @media (max-width: 900px) {
   .hud-center-top {
-    top: 4.5rem;
+    top: 3.8rem;
   }
 }
 
 @media (max-width: 768px) {
+  /* Nav console: full-width strip just below the very top */
   .hud-center-top {
-    top: 10px;
-    width: 92%;
+    top: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    padding: 0;
   }
-  
+
   .hud-nav-console {
     overflow-x: auto;
     width: 100%;
-    gap: 4px;
-    padding: 4px;
+    gap: 0;
+    padding: 5px 8px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    justify-content: flex-start;
   }
-  
+
   .hud-nav-console::-webkit-scrollbar {
     display: none;
   }
-  
+
   .nav-console-btn {
-    font-size: 0.55rem;
-    padding: 4px 8px;
+    font-size: 0.52rem;
+    padding: 5px 10px;
     white-space: nowrap;
     flex-shrink: 0;
+    letter-spacing: 0.08em;
   }
-  
+
+  /* Telemetry card: compact at bottom left, doesn't overlap hint */
   .telemetry-card {
-    left: 10px;
-    bottom: 4rem;
-    width: calc(100% - 20px);
-    max-width: 320px;
-    padding: 10px;
+    left: 8px;
+    bottom: 2.4rem;
+    width: min(300px, calc(100vw - 16px));
+    max-width: none;
+    padding: 10px 12px;
   }
-  
+
   .telemetry-planet-name #telemetry-planet-emoji {
     font-size: 1rem;
   }
-  
+
   .telemetry-planet-name #telemetry-planet-title {
     font-size: 0.85rem;
   }
-  
+
   .telemetry-section-desc {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
+    margin-bottom: 8px;
+  }
+
+  .telemetry-stats {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .telemetry-action-btn {
+    padding: 6px;
+    font-size: 0.6rem;
   }
 }
+
+@media (max-width: 480px) {
+  /* On tiny screens: hide telemetry card stats to save vertical space */
+  .telemetry-card {
+    bottom: 2rem;
+    width: calc(100vw - 16px);
+  }
+
+  .telemetry-stats {
+    display: none;
+  }
+
+  .telemetry-section-desc {
+    margin-bottom: 6px;
+  }
+
+  .nav-console-btn {
+    font-size: 0.48rem;
+    padding: 5px 8px;
+    letter-spacing: 0.05em;
+  }
+}
+
 
 /* ---- Language Switcher HUD Styles ---- */
 .lang-btn {
@@ -1992,6 +2096,106 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+/* =============================================
+   MOBILE EXTRA — CV PANEL & TOUCH FIXES
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* CV panel on mobile: full-height bottom sheet */
+  .panel.cv-panel {
+    width: calc(100vw - 24px);
+    right: 12px;
+    left: 12px;
+    top: auto;
+    bottom: 12px;
+    height: 88dvh;
+    transform: translateY(calc(100% + 24px));
+    border-radius: 16px 16px 12px 12px;
+  }
+  .panel.cv-panel.active {
+    transform: translateY(0);
+  }
+  .panel.cv-panel .panel-inner {
+    padding: 1rem 1rem;
+  }
+
+  /* CV header compact on mobile */
+  .cv-compact-header {
+    padding-right: 3rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .cv-asteroid-emoji { font-size: 1.2rem; }
+  .cv-title-text { font-size: 0.65rem; }
+  .cv-title-sub { font-size: 0.55rem; }
+  .cv-download-btn { font-size: 0.58rem; padding: 0.28rem 0.6rem; }
+
+  /* Ensure iframe fills available space */
+  .cv-iframe-full-container {
+    min-height: 0;
+  }
+
+  /* Bigger touch targets for buttons */
+  .hud-btn, .nav-console-btn, .lang-btn, .panel-close {
+    min-height: 36px;
+  }
+  .panel-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Prevent any horizontal overflow on the whole page */
+  .hud {
+    overflow: hidden;
+  }
+
+  /* Contact grid single column on small screens */
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Contact card padding compact */
+  .contact-card {
+    padding: 1rem 0.8rem;
+  }
+
+  /* Timeline text smaller */
+  .log-role { font-size: 0.9rem; }
+  .log-meta  { font-size: 0.68rem; }
+  .log-desc  { font-size: 0.8rem; }
+
+  /* Tags wrap nicely */
+  .card-tags { gap: 0.3rem; }
+  .tag { font-size: 0.65rem; padding: 0.18rem 0.5rem; }
+
+  /* Skill bars */
+  .skill-name { font-size: 0.8rem; }
+}
+
+@media (max-width: 380px) {
+  /* Very small phones: further reduce nav font */
+  .nav-console-btn {
+    font-size: 0.44rem;
+    padding: 4px 7px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Telemetry card: only show title + button on tiny phones */
+  .telemetry-card {
+    padding: 8px 10px;
+  }
+  .telemetry-body {
+    margin-bottom: 8px;
+  }
+
+  /* Panel larger */
+  .panel {
+    height: 90dvh;
+    bottom: 8px;
+  }
+}
+
 
 
 
